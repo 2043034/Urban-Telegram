@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html>
+    <head>
+    <style>
+        body {
+    background-color: black;
+}
+#Time {
+    text-align: center;
+    font-size: 40px;
+    font-family: "Courier New"
+    Courier, monospace;
+    color: red;
+    text-shadow: 5px 3px 25px blue;
+}
+#Date {
+    text-align: center;
+    font-size: 20px;
+    font-family: "Courier New"
+    courier, monospace;
+    color: red;
+    text-shadow: 5px 3px 25px blue;
+}
+    </style>
+        <title>Clock</title>
+        <script>
+            function printTime() {
+    // Getting All Properties Of Time
+    var d = new Date();
+    var year = d.getFullYear();
+    var month = d.getMonth();
+    var day = d.getDay();
+    var hour = d.getHours();
+    var testHour = d.getHours();
+    var minute = d.getMinutes();
+    var seconds = d.getSeconds();
+    var date = d.getDate();
+    var EorM;
+    var count = 0;
+    // Changing Numbers To Days Of The Week
+    switch(day) {
+        case 0:
+            day = "Sunday";
+            break;
+        
+        case 1:
+            day = "Monday";
+            break;
+        
+        case 2:
+            day = "Tuesday";
+            break;
+        
+        case 3:
+            day = "Wednesday";
+            break;
+        
+        case 4:
+            day = "Thursday";
+            break;
+        
+        case 5:
+            day = "Friday";
+            break;
+        
+        case 6:
+            day = "Saturday";
+            break;
+    }
+    // Changing Numbers To Months
+    switch(month) {
+        case 0:
+            month = "January";
+            break;
+        case 1:
+            month = "Febuary";
+            break;
+        case 2:
+            month = "March";
+            break;
+        case 3:
+            month = "April";
+            break;
+        case 4:
+            month = "May";
+            break;
+        case 5:
+            month = "June";
+            break;
+        case 6:
+            month = "July";
+            break;
+        case 7:
+            month = "August";
+            break;
+        case 8:
+            month = "September";
+            break;
+        case 9:
+            month = "October";
+            break;
+        case 10:
+            month = "November";
+            break;
+        case 11:
+            month = "December";
+            break;
+    }
+    if(hour < 10) {
+        hour = "0" + hour;
+    }
+    if(minute < 10) {
+        minute = "0" + minute;
+    }
+    if(seconds < 10) {
+        seconds = "0" + seconds;
+    }
+    // Printing It Out
+    var time = hour+":"+minute+":"+seconds+" ";
+    var dateoutput = day+", "+month+" "+date+", "+year;
+    document.getElementById("Time").innerHTML = time;
+    document.getElementById("Date").innerHTML = dateoutput;
+}
+// Repeating Every Milisecond
+setInterval(printTime, 1);
+        </script>
+    </head>
+    <body>
+        <p id="Time"></p>
+        <p id="Date"></p>
+    </body>
+</html>
