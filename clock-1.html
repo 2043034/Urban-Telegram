@@ -1,0 +1,275 @@
+<html>
+
+<head>
+  <meta charset="UTF-8" />
+  
+  <script src="https://code.jquery.com/jquery-3.1.1.js"></script>
+  <title>Analog Clock</title>
+  <style>
+      #blurry
+{
+    background: #132E35;
+    height: 100%;
+    width: 100%;
+    filter: blur(5px);
+    -webkit-filter: blur(40px);
+ 
+    
+
+}
+#Clock
+{
+    background: rgba(0, 0, 0, 0.2);
+    height: 220;
+    width: 220;
+    border-radius: 100%;
+    border: 9px solid #903A3A;
+    position: fixed;
+
+    left: 0;
+    right: 0;
+    bottom: 0;
+    top:0;
+    margin: auto;
+
+
+}
+
+
+#scndBorder
+{
+    height: 210;
+    width: 210;
+    border-radius: 100%;
+    border:5px solid #777676;
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    margin:auto;
+}
+
+
+
+#sec
+{
+
+    height: 80px;
+    width: 1px;
+    display: inline-block;
+     background-color: #CC5C5C; 
+    transform-origin: 0 80px;
+    -webkit-transform-origin-y: 80px;
+    -moz-transform-origin-y: 80px;
+    position: absolute;
+    top:33;
+   
+    left: 0;
+    right: 0;
+    margin: auto;
+
+    z-index: 1;
+}
+
+#min
+{
+    height: 75px;
+    width: 1.8px;
+    display: inline-block;
+
+
+
+    background-color: #E4ABAB;
+
+
+    transform-origin: 0 75px;
+    -webkit-transform-origin-y: 75px;
+    -moz-transform-origin-y: 75px;
+    
+
+
+
+
+    position: absolute;
+    top:38;
+
+    left: 0;
+    right: 0;
+    margin: auto;
+    z-index: 2;
+
+}
+
+
+#hour
+{
+    height: 55px;
+    width: 2px;
+    display: inline-block;
+
+
+
+    background-color: #E5F7FF;
+    border-top-right-radius: 75px;
+    border-top-left-radius: 75px;
+
+
+
+    transform-origin: 0 55px;
+    -webkit-transform-origin-y: 55px;
+    -moz-transform-origin-y: 55px;
+
+    
+
+
+
+
+    position: absolute;
+    top:57;
+
+    left: 0;
+    right: 0;
+    margin: auto;
+    z-index: 3;
+}
+
+
+
+
+
+div span
+{
+    color: #D6C3C3;
+    font-family: Arial, Helvetica, sans-serif;
+    width: 100%;
+    font-size: 10;
+    
+    
+}
+
+
+
+
+
+#center
+{
+    height: 0;
+    width: 0;
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    margin: auto;
+}
+
+
+#twelve
+{
+    position: absolute;
+    left: -5;
+    top: -100;
+}
+
+
+b
+{
+    font-size: 14;
+    
+}
+  </style>
+</head>
+
+<body>
+  <div id="blurry"></div>
+
+  <div id="Clock">
+
+    <div id="scndBorder">
+      <div id="center">
+        <span>I</span>
+        <span>II</span>
+        <span><b>III</b></span>
+        <span>IV</span>
+        <span>V</span>
+        <span><b>VI</b></span>
+
+        <span>VII</span>
+        <span>VIII</span>
+        <span><b>IX</b></span>
+        <span>X</span>
+        <span>XI</span>
+        <span id="twelve"><b>XII</b></span>
+      </div>
+    </div>
+
+
+
+    <div id="sec"></div>
+    <div id="min"> </div>
+    <div id="hour"></div>
+  </div>
+<script>
+    window.onload=function()
+{
+    showTime();
+    drawClock();
+
+
+}
+
+
+function showTime()
+{
+
+    var time=new Date();
+
+
+    $("#sec").css("transform","rotate("+time.getSeconds()*6+"deg)");
+    $("#min").css("transform","rotate("+time.getMinutes()*6+"deg)");
+    var hour=(getHour()*30)+time.getMinutes()/12*6;
+    $("#hour").css("transform","rotate("+hour+"deg)");
+
+
+
+}
+
+function drawClock()
+{
+    var center=document.getElementById("center");
+    var childs=center.children;
+    var left=[45,80,90,75,40,-5];
+    var top =[-92,-54,-9,38,75,-100];
+    for(var i=0;i<6;i++)
+        {
+            $(childs[i]).css("position","absolute");
+
+            $(childs[i]).css("left",left[i]);
+
+            $(childs[i]).css("top",top[i]);
+        }
+
+    $(childs[5]).css("top",87);
+
+
+    for(var i=childs.length-2, j=i;i>=6;i--,j-=2)
+        {
+            $(childs[i]).css("position","absolute");
+            $(childs[i]).css("left",(left[i-6]+10)*-1);
+            $(childs[i]).css("top",top[i-j]);
+        }
+}
+
+
+
+
+function getHour()
+{
+    return new Date().getHours() >12 ? new Date().getHours()-12 : new Date().getHours();
+}
+
+setInterval(showTime,1000);
+</script>
+</body>
+</html>
