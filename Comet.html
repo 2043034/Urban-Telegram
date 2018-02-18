@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Comets</title>
+    </head>
+    <body>
+        <div id="mega" onclick="spawnMega()">Spawn Mega Comet</div>
+        <canvas id="can"></canvas>
+        <script>
+            var can, c, W, H;//global vars go here
+var comets = [];
+const colors = ["#DBD44C", "#76AA5A", "#138EAD", "#6A6884", "#DD784D", "#00ECFF"];
+let gravity = 0.35;
+
+function normalizeX(x, y, xStart, yStart) {
+    var xDiff = x - xStart;
+    var yDiff = y - yStart;
+    var length = Math.sqrt((xDiff * xDiff) + (yDiff * yDiff));
+    return (xDiff / length);
+}
+
+function normalizeY(x, y, xStart, yStart) {
+    var yDiff = y - yStart;
+    var xDiff = x - xStart;
+    var length = Math.sqrt((xDiff * xDiff) + (yDiff * yDiff));
+    return (yDiff / length);
+}
+
+window.onload = function() {
+    init();
+    draw();
+}
+
+function init() {
+    can = document.getElementById("can");
+    c = can.getContext("2d");
+    W = window.innerWidth;
+    H = window.innerHeight;
+    can.width = W;
+    can.height = H;
+    
+    
+    //initialize globally declared objects here
+    
+    comets.push(new Comet(W / 2, -10));
+}
+
+function draw() {
+    requestAnimationFrame(draw);
+    c.beginPath();
+    c.rect(0,0,W,H);
+    c.fillStyle = "rgba(0,0,0,0.1)";
+    c.fill();
+    
+    if (Math.floor(Math.random() * 100 + 1) <= 3) {
+        var xPos = Math.random() * (W - 20) + 10;
+        comets.push(new Comet(xPos, -10));
+    }
+    
+    // animation code goes here
+    for (let i = comets.length - 1; i >= 0; --i) {
+        comets[i].update();
+        if (comets[i].isDone()) {
+            comets.splice(i, 1);
+        }
+    }
+    
+}
+
+function spawnMega() {
+    var xPos = Math.random() * (W - 80) + 40;
+    comets.push(new Comet(xPos, -10, true));
+}
+
+function Particle(x, y, xVel, yVel, color) {
+    //define particles
+    this.x = x;
+    this.y = y;
+    this.h = 3;
+    this.color = color;
+    this.xVel = xVel;
+    this.yVel = yVel;
+    this.lastPos = {
+        x: undefined,
+        y: undefined
+    }
+    
+    this.update = function() {
+        this.lastPos.x = this.x;
+        this.lastPos.y = this.y;
+        this.yVel += gravity;
+        this.y += this.yVel;
+        if (this.x < 2 || this.x > W - 2) {
+            this.xVel *= -1;
+        }
+        this.x += this.xVel;
+        this.render();
+    }
+    
+    this.render = function() {
+        
+        c.beginPath();
+        c.strokeStyle = this.color;
+        c.lineWidth = this.h;
+        c.lineCap = "round";
+        c.moveTo(this.lastPos.x, this.lastPos.y);
+        c.lineTo(this.x, this.y);
+        c.stroke();
+        c.closePath();
+    }
+}
+
+function Comet(x, y, mega = false) {
+    this.mega = mega;
+    
+    this.x = x;
+    this.y = y;
+    this.xVel = 0;
+    this.yVel = 5;
+    this.lastPos = {
+        x: undefined,
+        y: undefined
+    }
+    
+    if (this.mega) {
+        this.h = 25;
+        this.nParticles = 200;
+        this.explodeCounter = 135;
+    } else {
+        this.h = 7;
+        this.nParticles = Math.floor(Math.random() * 20 + 30);
+        this.explodeCounter = 65;
+    }
+    
+    this.color = colors[parseInt(Math.random() * colors.length)];
+    
+    this.particles = [];
+    this.exploded = false;
+    
+    this.done = false;
+    
+    
+    this.update = function() {
+    
+        if (!this.exploded) {
+            
+            if (this.y > H) {
+                this.explode();
+            } else {
+                this.lastPos.x = this.x;
+                this.lastPos.y = this.y;
+                this.yVel += gravity;
+                this.y += this.yVel;
+                this.render();
+            }
+            
+        } else {
+            
+            for (let i = 0; i < this.nParticles; ++i) {
+                this.particles[i].update();
+            }
+            this.explodeCounter -= 1;
+            if (this.explodeCounter === 0) {
+                this.particles = [];
+                this.done = true;
+            }
+            
+        }
+        
+        
+    }
+    
+    this.render = function() {
+        c.beginPath();
+        c.strokeStyle = this.color;
+        c.lineWidth = this.h;
+        c.lineCap = "round";
+        c.moveTo(this.lastPos.x, this.lastPos.y);
+        c.lineTo(this.x, this.y);
+        c.stroke();
+        c.closePath();
+    }
+    
+    this.explode = function() {
+        this.exploded = true;
+        for (let i = 0; i < this.nParticles; ++i) {
+            if (this.mega) {
+                var xComp = this.x + Math.random() * 2 - 1;
+                var yComp = this.y + Math.random() * -1;
+                //normalize makes it circular
+                xVel = normalizeX(xComp, yComp, this.x, this.y) * (Math.random() * 5 + 10);
+                yVel = normalizeY(xComp, yComp, this.x, this.y) * (Math.random() * 5 + 17);
+                
+            } else {
+                var xComp = this.x + Math.random() * 2 - 1;
+                var yComp = this.y + Math.random() * -1;
+                //normalize makes it circular
+                xVel = normalizeX(xComp, yComp, this.x, this.y) * (Math.random() * 3 + 5);
+                yVel = normalizeY(xComp, yComp, this.x, this.y) * (Math.random() * 3 + 9);
+            }
+            this.particles.push(new Particle(this.x, this.y, xVel, yVel, this.color));
+        }
+    }
+    
+    this.isDone = function() {
+        return this.done;
+    }
+    
+    /*this.reset = function() {
+        this.x = Math.random() * W - this.h;
+        this.y = -10;
+        this.particles = [];
+        this.explodeCounter = 120;
+        this.yVel = 5;
+        this.exploded = false;
+    }*/
+
+}
+        </script>
+        <style>
+            body {
+    position: relative;
+    margin: 0;
+    padding: 0;
+}
+
+#mega {
+    position: absolute;
+    z-index: 2;
+    top: 45px;
+    padding: 5px 10px;
+    margin: auto;
+    left: 50%;
+    transform: translate(-50%, 0);
+    text-align: center;
+    background: rgba(0, 0, 255, 0.5);
+    border: 1px solid white;
+    color: white;
+    font-size: 16px;
+}
+#mega:hover {
+    background: rgba(0, 0, 255, 0.75);
+    cursor: pointer;
+}
+
+#can {
+    border: 1px solid grey;
+}
+        </style>
+    </body>
+</html>
