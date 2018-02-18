@@ -1,0 +1,1665 @@
+<!DOCTYPE html>
+<html>
+   <head>
+      <title>Calc</title>
+      <meta name="viewport" content="width=device-width, initial-scale=1">
+      <meta charset="utf-8">
+      <script src="https://code.jquery.com/jquery-3.1.1.js"></script>
+      <script src="https://cdn.jsdelivr.net/npm/clipboard@1/dist/clipboard.min.js"></script>
+      <script>
+          $(function() {
+
+    //Instantiate the Clipboard Object
+    new Clipboard('.op_target');
+
+    //remove cursor pointer on touchscreen devices
+    if ((('ontouchstart' in window) || (navigator.msMaxTouchPoints > 0))) {
+        $("body *").css({
+            "cursor": "none"
+        });
+    }
+
+    //Variables
+    var op, selector, p, nbr, base, elID, thisID, char, k = 0,
+        pressed, lpID;
+    //Arrays
+    var myarr = ["hex", "dec", "oct", "bin"];
+    var oparr = ["divided", "multiply", "plus", "mince"];
+    //Boolean Variables
+    var found = false;
+    var input = false;
+    var del = true;
+    var di_f = false,
+        mu_f = false,
+        pl_f = false,
+        mi_f = false;
+
+    //Get the vibration amount from the slider input
+    $(".vibration_amount").text($("input[type='range']").val());
+
+    //Change the background-color of the HEX DEC OCT BIN to green when clicked on
+    //Add the disabled class that will prevents some Number keys from working
+    $("#hex,#dec,#oct,#bin").click(function() {
+        removeCPdata();
+        if (!($(".slider").hasClass("nd"))) vibrate();
+        $(this).addClass("gr active");
+        if ($(this).hasClass("colorChange")) {
+            $(this).siblings().addClass("gr-op-cc");
+            $(this).parent().siblings().children().removeClass("gr active gr-op-cc");
+        } else if (!($(this).hasClass("colorChange"))) {
+            $(this).siblings().addClass("gr-op");
+            $(this).parent().siblings().children().removeClass("gr active gr-op");
+        }
+
+        if ($("#reset").hasClass("mla")) $("#hex+div #ho,#dec+div #do,#oct+div #oo,#bin+div #bo").text("0");
+
+        if (this.id == "hex") $("div").removeClass("disabled");
+        else if (this.id == "dec") {
+            $("div").removeClass("disabled");
+            $(".row5 div").addClass("disabled");
+        } else if (this.id == "oct") {
+            $("div").removeClass("disabled");
+            $(".row5 div").addClass("disabled");
+            $(".od").addClass("disabled");
+        } else {
+            $("div").removeClass("disabled");
+            $(".row5 div,.bd").addClass("disabled");
+            $(".od").addClass("disabled");
+        }
+    });
+
+    //Overwrite's or Append's text when the user clicked on a number key
+    $(".txt").click(function() {
+        removeCPdata();
+        if ($("#hex").hasClass("active")) aORo("#hex", this.id);
+        else if ($("#dec").hasClass("active") && !($(this).hasClass("disabled"))) aORo("#dec", this.id);
+        else if ($("#oct").hasClass("active") && !($(this).hasClass("disabled"))) aORo("#oct", this.id);
+        else if ($("#bin").hasClass("active") && !($(this).hasClass("disabled"))) aORo("#bin", this.id);
+
+    });
+
+    //Change the background-color of the x / + - to green when clicked on
+    //Remove the green background-color of the x / + - when clicked on equal key
+    //Add the class hi (has it) that we'll help to know if the keys is on in the following code
+    $("#divided,#multiply,#plus,#mince,#equal").click(function() {
+        removeCPdata();
+        if (!($(".slider").hasClass("nd"))) vibrate();
+        if (this.id != "equal") {
+            $(".row8 div, .row7 div").removeClass("gr hi");
+            $(this).addClass("gr hi");
+        } else $(".row8 div,.row7 div").removeClass("gr");
+    });
+
+    //Check which key have been clicked on
+    $("#divided,#multiply,#plus,#mince").click(function() {
+        found = true;
+        if (this.id == "divided") {
+            di_f = true;
+            mu_f = false;
+            pl_f = false;
+            mi_f = false;
+        } else if (this.id == "multiply") {
+            di_f = false;
+            mu_f = true;
+            pl_f = false;
+            mi_f = false;
+        } else if (this.id == "plus") {
+            di_f = false;
+            mu_f = false;
+            pl_f = true;
+            mi_f = false;
+        } else if (this.id == "mince") {
+            di_f = false;
+            mu_f = false;
+            pl_f = false;
+            mi_f = true;
+        }
+        p = noSpace($("#do"));
+    });
+
+    //Call the function equal_output() that will the needed arithmetic
+    $("#equal").click(function() {
+        if (di_f && input) equal_output("/");
+        else if (mu_f && input) equal_output("*");
+        else if (pl_f && input) equal_output("+");
+        else if (mi_f && input) equal_output("-");
+        found = true;
+        di_f = false;
+        mu_f = false;
+        pl_f = false;
+        mi_f = false;
+        input = false;
+        del = false;
+    });
+
+    //Change the outputs to 0 when clicking on 0
+    $("#ac").click(function() {
+        removeCPdata();
+        if (!($(".slider").hasClass("nd"))) vibrate();
+        $("#hex+div #ho,#dec+div #do,#oct+div #oo,#bin+div #bo").text("0");
+    });
+
+    //Delete the last input character
+    //Update in each click by calling the output's functions
+    $("#del").click(function() {
+        removeCPdata();
+        if (!($(".slider").hasClass("nd"))) vibrate();
+        var i;
+        for (i = 0; i < myarr.length; i++) {
+            var arrID = "#" + myarr[i];
+            if (($(arrID).hasClass("active")) && (noSpace($(arrID).siblings().children()) != "0") && (noSpace($(arrID).siblings().children()).length != 1) && (del)) {
+                $(arrID).siblings().children().text(noSpace($(arrID).siblings().children()).slice(0, -1));
+            } else if (noSpace($(arrID).siblings().children()).length == 1 && del) {
+                $(arrID).siblings().children().text("0");
+            }
+            if (del) base_output();
+        }
+    });
+
+    //Call cpFunction() on mousedown or touchstart and set the calling Interval to 35ms
+    $("#ho,#do,#oo,#bo").parent().on('mousedown touchstart', function() {
+        $(".op_target").removeAttr('data-clipboard-text');
+        pressed = setInterval(cpFunction, 35, "#" + $(this).children().attr("id"));
+    });
+
+    //Clear the seted Interval and trigger the element that has the data-clipboard-text on mouseup or touchend
+    $("#ho,#do,#oo,#bo").parent().on('mouseup touchend', function() {
+        k = 0;
+        $(".op_target").trigger('click');
+        clearInterval(pressed);
+    });
+
+    //Show the setting menu when clicking on the gear icon
+    //We've added the class translate to do so
+    $("#setting").click(function() {
+        removeCPdata();
+        $(".setting_window").addClass("transition");
+        $(".setting_window").toggleClass("translate");
+    });
+
+    //Hide the setting menu when clicking on the back icon
+    //We've used the toggleClass function that we'll remove the class if the element has it and add it if not
+    $("#back").click(function() {
+        $(".setting_window").toggleClass("translate");
+    });
+
+    //Change the theme to dark mode when the toggle button is on
+    //Change the icon(png images) to the new images(that are black)
+    //I didn't use SVG because I still struggle with it but I'm working on it
+    $("#dark_mode").click(function() {
+        $(this).toggleClass("mla");
+        $(this).parent().toggleClass("bc");
+        $("body *").toggleClass("colorChange");
+        var i;
+        for (i = 0; i < myarr.length; i++) {
+            var arrID = "#" + myarr[i];
+            if ($(arrID).hasClass("active") && $(this).hasClass("mla")) {
+                $(arrID).siblings().addClass("gr-op-cc");
+                $(arrID).siblings().removeClass("gr-op");
+            } else if ($(arrID).hasClass("active") && !($(this).hasClass("mla"))) {
+                $(arrID).siblings().addClass("gr-op");
+                $(arrID).siblings().removeClass("gr-op-cc");
+            }
+        }
+        if ($(this).hasClass("mla")) {
+            if (!($("#vibration").parent().hasClass("bc"))) $(".enable.colorChange").addClass("bw");
+            $("#earth").attr("src", "https://i.imgur.com/8WuFWw5.png");
+            $("#pbrush").attr("src", "https://i.imgur.com/PS5BGoQ.png");
+            $(".checkmark").attr("src", "https://i.imgur.com/oZ8bGHR.png");
+        } else if (!($(this).hasClass("mla"))) {
+            $("#earth").attr("src", "https://i.imgur.com/M9DA1H7.png");
+            $("#pbrush").attr("src", "https://i.imgur.com/IFW8Laf.png");
+            $(".checkmark").attr("src", "https://i.imgur.com/k4mAmp2.png");
+        }
+
+    });
+
+    //Activate the vibration when the toggle button is on
+    //Get the value of the slider and display it in the vibration amount text
+    $("#vibration").click(function() {
+        $(this).toggleClass("mla");
+        $(this).parent().toggleClass("bc");
+        $(".slider").toggleClass("nd");
+        if (!($(this).hasClass("mla"))) $(".vibration_amount").text("");
+        else $(".vibration_amount").text($("input[type='range']").val());
+    });
+
+    ////Activate the reset when the toggle button is on
+    $("#reset").click(function() {
+        $(this).toggleClass("mla");
+        $(this).parent().toggleClass("bc");
+    });
+
+    //Update the vibration amount text from the slider value
+    $("input[type='range']").on("touchstart touchmove mousemove click", function() {
+        $(".vibration_amount").text($("input[type='range']").val());
+    });
+
+    //Show the language menu when clicking on language element
+    $(".language").click(function() {
+        $(".language_setting").toggleClass("slideup");
+    });
+
+    //Hide the language menu when clicking on language element
+    $(".ok").click(function() {
+        $(".language_setting").toggleClass("slideup");
+    });
+
+    //Change the Interface language to espagnol
+    $(".espagnol").click(function() {
+        $(this).addClass("selected");
+        $(this).children().addClass("checked");
+        $(".english").removeClass("selected");
+        $(".english").children().removeClass("checked");
+        $(".sl").text("Seleccionar idioma");
+        $(".sl").siblings().text("Aceptar");
+        $(".stg").text("Ajustes");
+        $(".lg").text("Idioma");
+        $(".clg").text("Español>");
+        $(".darkm").text("Modo oscuro");
+        $(".vbr").text("Vibración");
+        $(".en").text("Activar");
+        $(".abt").text("Sobre Mi");
+        $(".abtp").html("Hola chicos, me llamo Salah Eddine, de Marruecos y me encanta hacer cosas al azar.<br>De todos modos las ideas de esta aplicación <span>no es mio</span>, He escrito todo el código en HTML/CSS/JS pero la aplicación real probablemente se ha creado con Java y XML, <span>por favor, apoye al desarrollador real de la aplicación</span> y, por cierto, lo recreé como un ejercicio para probar mis habilidades y practicar más, la aplicación me tomó como 26h.");
+        $(".desc").text("Usted puede encontrarlos aquí:");
+        $(".ma").text("Más Apps");
+        $(".sh").text("Compartir");
+        $(".ra").text("Calificar");
+        $(".bna").text("Sin Anuncios");
+
+    });
+
+    //Change the Interface language to english
+    $(".english").click(function() {
+        $(this).addClass("selected");
+        $(this).children().addClass("checked");
+        $(".espagnol").removeClass("selected");
+        $(".espagnol").children().removeClass("checked");
+        $(".sl").text("Select language");
+        $(".sl").siblings().text("Ok");
+        $(".stg").text("Settings");
+        $(".lg").text("Language");
+        $(".clg").text("English>");
+        $(".darkm").text("Dark mode");
+        $(".vbr").text("Vibration");
+        $(".en").text("Enable");
+        $(".abt").text("About Me");
+        $(".abtp").html("Hey guys, my name's Salah Eddine, from Morocco and I love to make random stuff.<br>Anyway this app's ideas <span>not mine</span>, I've written all the code in HTML/CSS/JS but the real app probably have been created with Java and XML, <span>please support the real developer of the app</span> and by the way I've recreated it as an exercise to test my skills and to practice more, the app took me like 26h.");
+        $(".desc").text("You can  find them here:");
+        $(".ma").text("More Apps");
+        $(".sh").text("Share App");
+        $(".ra").text("Rate App");
+        $(".bna").text("Buy No-Ads");
+    });
+
+
+    /*-------------------------------------------------------------------------------------------------*/
+    //Functions
+
+    //Do the arithmetic needed and show the result by calling the function output
+    function equal_output(op) {
+        q = noSpace($("#do"));
+        switch (op) {
+            case '/':
+                $("#do").text(Number(p) / Number(noSpace($("#do"))));
+                break;
+            case '*':
+                $("#do").text(Number(p) * Number(noSpace($("#do"))));
+                break;
+            case '+':
+                $("#do").text(Number(p) + Number(noSpace($("#do"))));
+                break;
+            case '-':
+                $("#do").text(Number(p) - Number(noSpace($("#do"))));
+                break;
+        }
+        output();
+    }
+
+    //Convert the input HEX number to DEC OCT BIN
+    function hex_output() {
+        var i;
+        for (i = 0; i < myarr.length; i++) {
+            var arrID = "#" + myarr[i];
+            if ($(arrID).hasClass("active") && arrID == "#hex") {
+                $("#dec+div #do").text(base2dec(noSpace($("#hex+div #ho")), 16));
+                $("#oct+div #oo").text(base2dec(noSpace($("#hex+div #ho")), 16).toString(8));
+                $("#bin+div #bo").text(base2dec(noSpace($("#hex+div #ho")), 16).toString(2));
+            }
+        }
+        separate();
+    }
+
+    //Convert the input DEC number to HEX OCT BIN
+    function dec_output() {
+        var i;
+        for (i = 0; i < myarr.length; i++) {
+            var arrID = "#" + myarr[i];
+            if ($(arrID).hasClass("active") && arrID == "#dec") {
+                $("#hex+div #ho").text((Number(noSpace($("#dec+div #do"))).toString(16)).toUpperCase());
+                $("#oct+div #oo").text(Number(noSpace($("#dec+div #do"))).toString(8));
+                $("#bin+div #bo").text(Number(noSpace($("#dec+div #do"))).toString(2));
+            }
+        }
+        separate();
+    }
+
+    //Convert the input OCT number to HEX DEC BIN
+    function oct_output() {
+        var i;
+        for (i = 0; i < myarr.length; i++) {
+            var arrID = "#" + myarr[i];
+            if ($(arrID).hasClass("active") && arrID == "#oct") {
+                $("#hex+div #ho").text(base2dec(noSpace($("#oct+div #oo")), 8).toString(16).toUpperCase());
+                $("#dec+div #do").text(base2dec(noSpace($("#oct+div #oo")), 8));
+                $("#bin+div #bo").text(base2dec(noSpace($("#oct+div #oo")), 8).toString(2));
+            }
+        }
+        separate();
+    }
+
+    //Convert the input BIN number to HEX DEC OCT
+    function bin_output() {
+        var i;
+        for (i = 0; i < myarr.length; i++) {
+            var arrID = "#" + myarr[i];
+            if ($(arrID).hasClass("active") && arrID == "#bin") {
+                $("#hex+div #ho").text(base2dec(noSpace($("#bin+div #bo")), 2).toString(16).toUpperCase());
+                $("#dec+div #do").text(base2dec(noSpace($("#bin+div #bo")), 2));
+                $("#oct+div #oo").text(base2dec(noSpace($("#bin+div #bo")), 2).toString(8));
+            }
+        }
+        separate();
+    }
+
+    //Show the result after get called from the equal_output function
+    function output() {
+        $("#hex+div #ho").text((Number(noSpace($("#dec+div #do"))).toString(16)).toUpperCase());
+        $("#oct+div #oo").text(Number(noSpace($("#dec+div #do"))).toString(8));
+        $("#bin+div #bo").text(Number(noSpace($("#dec+div #do"))).toString(2));
+        separate();
+    }
+
+    //Returns the decimal outpout from any base
+    function base2dec(nbr, base) {
+        if (!(nbr.match(/\./g))) {
+            return parseInt(nbr, base);
+        } else {
+            if (nbr.slice(-1) == ".") nbr += "0";
+            nbr = nbr.split(/\./);
+            var len = nbr[1].length;
+            nbr[1] = parseInt(nbr[1], base);
+            nbr[1] *= Math.pow(base, -len);
+            return parseInt(nbr[0], base) + nbr[1];
+        }
+    }
+
+    //Divide the string in 4 or 3 number Chunks
+    function separate() {
+        $("#hex+div #ho").text(noSpace($("#hex+div #ho")).match(/.{1,4}/g).join(" "));
+        $("#dec+div #do").text(noSpace($("#dec+div #do")).match(/.{1,3}/g).join(" "));
+        $("#oct+div #oo").text(noSpace($("#oct+div #oo")).match(/.{1,4}/g).join(" "));
+        $("#bin+div #bo").text(noSpace($("#bin+div #bo")).match(/.{1,4}/g).join(" "));
+    }
+
+    //Remove the spaces from the selector
+    function noSpace(selector) {
+        return selector.text().split(" ").join("");
+    }
+
+    //Vibrate's when it's called
+    function vibrate() {
+        window.navigator.vibrate(Number($("#vbr_nbr").val()));
+    }
+
+    //The click event of $(".txt") related Functions
+    //This function is the responsible of Appending or Overwritting text to the output
+    //a stands for append
+    //o stands for overwrite
+    function aORo(elID, thisID) {
+        if (noSpace($("#" + thisID)) != ".") {
+            del = true;
+            if (((noSpace($(elID + "+div #" + elID[1] + "o")) != "0") || (noSpace($(elID + "+div #" + elID[1] + "o")).slice(-1) == ".")) && (!(found))) txtAp(elID, thisID);
+            else txtOv(elID, thisID, "");
+        } else if (noSpace($("#" + thisID)) == ".") {
+            del = true;
+            if (((noSpace($(elID + "+div #" + elID[1] + "o")).match(/\./g) || []).length < 1) && (!(found))) txtAp(elID, thisID);
+            else if (found) txtOv(elID, thisID, "0");
+        }
+        base_output();
+    }
+
+    //Append function
+    function txtAp(elID, thisID) {
+        if (!($(".slider").hasClass("nd"))) vibrate();
+        $(elID + "+div #" + elID[1] + "o").append(noSpace($("#" + thisID)));
+    }
+
+    //Overwrite function
+    function txtOv(elID, thisID, char) {
+        found = false;
+        input = true;
+        if (!($(".slider").hasClass("nd"))) vibrate();
+        $(elID + "+div #" + elID[1] + "o").text(char + noSpace($("#" + thisID)));
+    }
+
+    //To call all output functions at once
+    function base_output() {
+        hex_output();
+        dec_output();
+        oct_output();
+        bin_output();
+    }
+
+    //This function is responsible for the Clipboard action and animation
+    function cpFunction(lpID) {
+        k++;
+        if (k == 20) {
+            k = 0;
+            $(lpID).parent().attr("data-clipboard-text", $(lpID).text());
+            //window.navigator.vibrate(75);
+            setTimeout(function() {
+                $(".clipboard_flex").toggleClass("clipboard_display");
+            }, 1150);
+            $(".clipboard_flex").toggleClass("clipboard_display");
+            $(lpID).parent().trigger('mouseup touchstart');
+        }
+    }
+
+    //remove data-clipboard-text attribute from the selected element
+    function removeCPdata() {
+        $(".op_target").removeAttr('data-clipboard-text');
+    }
+});
+
+      </script>
+      <style>
+          @import url('https://fonts.googleapis.com/css?family=Varela+Round');
+@import url('https://fonts.googleapis.com/css?family=Oxygen');
+
+/*General Style
+************************************/
+
+* {
+    padding: 0;
+    margin: 0;
+    user-select: none;
+    font-family: 'Oxygen', sans-serif;
+    font-size: 1.2rem;
+}
+
+::-webkit-scrollbar {
+    display: none;
+}
+
+html,
+body {
+    max-width: 100vw;
+    max-height: 100vh;
+    overflow: hidden;
+}
+
+body {
+    position: relative;
+}
+
+
+/*row 1 to 4
+************************************/
+
+.sr {
+    display: flex;
+    color: rgb(255, 255, 255);
+    font-weight: bold;
+    height: 11.11vh;
+    box-sizing: border-box;
+}
+
+.sr div:first-child {
+    flex: 2.4;
+    background-color: rgb(56, 126, 245);
+    text-align: center;
+    line-height: 11.11vh;
+    cursor: pointer;
+}
+
+.sr div:first-child:active {
+    background-color: rgb(12, 96, 238);
+}
+
+.sr div:last-child {
+    flex: 9.6;
+    background-color: rgb(224, 224, 224);
+    border-top: 1px solid rgb(200, 200, 200);
+    color: black;
+    display: flex;
+    overflow-y: scroll;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.sr div:last-child span {
+    display: block;
+    overflow-y: scroll;
+    font-weight: normal;
+    font-size: .8rem;
+    text-align: right;
+    word-break: break-all;
+    padding: 0 4px;
+}
+
+.sr:first-of-type div:last-child {
+    border-top-color: transparent;
+}
+
+
+/*row 5
+************************************/
+
+.row5 {
+    display: flex;
+    height: 11.11vh;
+}
+
+.row5 div {
+    background-color: rgb(248, 248, 248);
+    flex: 2;
+    text-align: center;
+    font-weight: bold;
+    color: rgb(68, 68, 68);
+    line-height: 11.11vh;
+    cursor: pointer;
+}
+
+.row5 div:active {
+    background-color: rgb(229, 229, 229);
+}
+
+
+/*row 6 to 8
+************************************/
+
+.ss {
+    display: flex;
+    height: 11.11vh;
+}
+
+.ss div {
+    flex: 2.4;
+    line-height: 11.11vh;
+    text-align: center;
+    background-color: rgb(248, 248, 248);
+    font-weight: bold;
+    color: rgb(68, 68, 68);
+    cursor: pointer;
+}
+
+.ss div:active {
+    background-color: rgb(229, 229, 229);
+}
+
+.ss .b {
+    background-color: rgb(56, 126, 245);
+    color: white;
+}
+
+.ss .b:active {
+    background-color: rgb(12, 96, 238);
+}
+
+.ss .r {
+    background-color: rgb(239, 71, 58);
+    color: white;
+    font-size: 1rem;
+}
+
+.ss .r:active {
+    background-color: rgb(228, 33, 18);
+}
+
+
+/*row 9
+************************************/
+
+.row9 {
+    display: flex;
+    height: 11.11vh;
+    font-weight: bold;
+    color: rgb(68, 68, 68);
+    cursor: pointer;
+}
+
+.row9 div {
+    flex: 2.4;
+    text-align: center;
+    line-height: 11.11vh;
+    background-color: rgb(248, 248, 248);
+}
+
+.row9 div:active {
+    background-color: rgb(229, 229, 229);
+}
+
+.row9 div:nth-child(3) {
+    flex: 4.8;
+}
+
+.row9 div:nth-child(3),
+.row9 div:nth-child(4) {
+    background-color: rgb(239, 71, 58);
+    color: white;
+}
+
+.row9 div:nth-child(3):active,
+.row9 div:nth-child(4):active {
+    background-color: rgb(228, 33, 18);
+}
+
+
+/*rounded font and size
+************************************/
+
+.rd {
+    font-family: "Varela Round", sans-serif;
+}
+
+.sz {
+    font-size: 1.5rem;
+}
+
+
+/*Gear Style*/
+
+#setting {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+#setting img {
+    width: 30px;
+}
+
+.container .clipboard_flex {
+    position: absolute;
+    display: flex;
+    bottom: 5vh;
+    height: 10vh;
+    width: 100vw;
+    visibility: visible;
+    opacity: 1;
+    transition: visibility 0.5s ease, opacity 0.5s ease;
+}
+
+.container .clipboard_style {
+    background: rgba(0, 0, 0, 0.5);
+    border-radius: 20px;
+    padding: 15px 20px;
+    color: rgba(255, 255, 255, 0.8);
+    margin: auto;
+}
+
+.container .clipboard_display {
+    visibility: hidden;
+    opacity: 0;
+    transition: visibility 1s ease-in, opacity 1s ease-in;
+}
+
+
+/*Setting Window Style
+****************************************/
+
+.setting_window {
+    position: relative;
+    max-width: 100vw;
+    height: 100vh;
+    background: rgb(245, 245, 245);
+    margin-top: -100vh;
+    overflow-y: scroll;
+    left: 100%;
+}
+
+.setting_window * {
+    font-family: 'Oxygen', sans-serif;
+    font-size: 1rem;
+}
+
+.setting_window .Srow {
+    position: fixed;
+    display: flex;
+    background: rgb(56, 126, 245);
+    height: 12vh;
+    width: 100%;
+}
+
+.setting_window .Srow div:first-child {
+    flex: 1;
+}
+
+.setting_window .Srow div:first-child img {
+    width: 5vh;
+    margin-top: 3.5vh;
+    cursor: pointer;
+}
+
+.setting_window .Srow div:last-child {
+    flex: 11;
+    color: white;
+    font-weight: bold;
+    font-size: 1.3rem;
+    line-height: 12vh;
+    padding-left: 20px;
+}
+
+
+/*Language Style*/
+
+.setting_window .language {
+    display: flex;
+    background: white;
+    height: 10vh;
+    cursor: pointer;
+    margin-top: 12vh;
+}
+
+.setting_window .language:active {
+    background: rgb(217, 217, 217);
+}
+
+.setting_window .language div:nth-child(1) {
+    padding-left: 20px;
+}
+
+.setting_window .language div:nth-child(1) img {
+    flex: 1;
+    width: 5vh;
+    margin-top: 2.5vh;
+}
+
+.setting_window .language div:nth-child(2) {
+    flex: 10;
+    line-height: 10vh;
+    padding-left: 15px;
+}
+
+.setting_window .language div:nth-child(3) {
+    flex: 1;
+    line-height: 10vh;
+    padding-right: 20px;
+    color: rgb(197, 197, 197);
+}
+
+
+/*Dark mode Style*/
+
+.setting_window .dm,
+.setting_window .reset,
+.setting_window .clipboard_desc {
+    display: flex;
+    background: white;
+    height: 10vh;
+    box-sizing: border-box;
+    border: 2px solid rgb(229, 229, 229);
+    border-width: 2px 0;
+}
+
+.setting_window .dm>div:nth-child(1) {
+    padding-left: 20px;
+}
+
+.setting_window .dm>div:nth-child(1) img {
+    flex: 1;
+    width: 5vh;
+    margin-top: 2.5vh;
+}
+
+.setting_window .dm>div:nth-child(2) {
+    flex: 9;
+    line-height: 10vh;
+    padding-left: 15px;
+}
+
+.setting_window .dm>div:nth-child(3) {
+    flex: 2;
+    line-height: 10vh;
+    height: 100%;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+
+/*Vibration Style*/
+
+.setting_window .vibration {
+    display: flex;
+    padding: 10px 0 10px 20px;
+    height: 3vh;
+}
+
+.setting_window .vibration div:first-child {
+    flex: 11;
+    line-height: 3vh;
+}
+
+.setting_window .vibration_amount {
+    flex: 1;
+    color: rgb(197, 197, 197);
+    line-height: 3vh;
+}
+
+
+/*Enable Style*/
+
+.setting_window .enable {
+    display: flex;
+    background: white;
+    box-sizing: border-box;
+    border: 2px solid rgb(229, 229, 229);
+    border-width: 2px 0;
+    height: 10vh;
+}
+
+.setting_window .enable>div:first-child {
+    flex: 10;
+    line-height: 10vh;
+    padding-left: 20px;
+}
+
+.setting_window .enable>div:last-child {
+    flex: 2;
+    line-height: 10vh;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+
+/* Switch Style */
+
+.switch {
+    width: 60px;
+    height: 30px;
+    margin-left: auto;
+    margin-right: 30px;
+    border-radius: 100px;
+    border: 2px solid rgb(220, 220, 220);
+    transition: background 0.2s ease;
+}
+
+.switch .circle {
+    width: 30px;
+    height: 30px;
+    background: white;
+    box-shadow: 0 5px 10px rgba(0, 0, 0, 0.25), 0 -1px 5px rgba(0, 0, 0, 0.25);
+    border-radius: 50%;
+    cursor: pointer;
+    transition: margin 0.3s ease-in-out;
+}
+
+.bc {
+    background: rgb(56, 126, 245);
+    border-color: rgb(56, 126, 245);
+}
+
+.mla {
+    margin-left: 50%;
+}
+
+
+/*Slider Style*/
+
+.setting_window .slider {
+    display: flex;
+    background: white;
+    box-sizing: border-box;
+    border: 2px solid rgb(229, 229, 229);
+    border-width: 0 0 2px 0;
+    height: 10vh;
+}
+
+.setting_window .slider div:nth-child(1) {
+    flex: 1;
+    line-height: 10vh;
+    text-align: center;
+    font-family: "Varela Round", sans-serif;
+    font-size: 3rem;
+}
+
+.setting_window .slider div:nth-child(2) {
+    flex: 10;
+    line-height: 10vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.setting_window .slider input {
+    width: 100%;
+    cursor: pointer;
+    -webkit-appearance: none !important;
+    -moz-appearance: none !important;
+    -o-appearance: none !important;
+    -ms-appearance: none !important;
+    outline: none !important;
+    background: rgb(204, 204, 204);
+    height: 4px;
+}
+
+.setting_window .slider input::-webkit-slider-thumb {
+    -webkit-appearance: none !important;
+    outline: none !important;
+    width: 30px;
+    height: 30px;
+    background: white;
+    box-shadow: 0 5px 10px rgba(0, 0, 0, 0.2), 0 -1px 2px rgba(0, 0, 0, 0.2);
+    border-radius: 50%;
+    cursor: pointer;
+}
+
+.setting_window .slider input::-o-slider-thumb {
+    -o-appearance: none !important;
+    outline: none !important;
+    width: 30px;
+    height: 30px;
+    background: white;
+    box-shadow: 0 5px 10px rgba(0, 0, 0, 0.2), 0 -1px 2px rgba(0, 0, 0, 0.2);
+    border-radius: 50%;
+    cursor: pointer;
+}
+
+.setting_window .slider input::-ms-slider-thumb {
+    -ms-appearance: none !important;
+    outline: none !important;
+    width: 30px;
+    height: 30px;
+    background: white;
+    box-shadow: 0 5px 10px rgba(0, 0, 0, 0.2), 0 -1px 2px rgba(0, 0, 0, 0.2);
+    border-radius: 50%;
+    cursor: pointer;
+}
+
+.setting_window .slider input::-webkit-slider-thumb:active {
+    box-shadow: 0 5px 10px rgba(0, 0, 0, 0.2), 0 -1px 2px rgba(0, 0, 0, 0.2), 0 0 0 20px rgba(56, 126, 245, 0.05);
+}
+
+.setting_window .slider input::-o-slider-thumb:active {
+    box-shadow: 0 5px 10px rgba(0, 0, 0, 0.2), 0 -1px 2px rgba(0, 0, 0, 0.2), 0 0 0 20px rgba(56, 126, 245, 0.05);
+}
+
+.setting_window .slider input::-ms-slider-thumb:active {
+    box-shadow: 0 5px 10px rgba(0, 0, 0, 0.2), 0 -1px 2px rgba(0, 0, 0, 0.2), 0 0 0 20px rgba(56, 126, 245, 0.05);
+}
+
+.setting_window .slider div:nth-child(3) {
+    flex: 1;
+    line-height: 10vh;
+    text-align: center;
+    font-family: "Varela Round", sans-serif;
+    font-size: 3rem;
+}
+
+.nd {
+    display: none !important;
+}
+
+
+/*reset Style
+**********************************/
+
+.setting_window .reset {
+    margin-top: 5vh;
+}
+
+.setting_window .reset .reset_desc {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    flex: 10;
+    padding-left: 20px;
+}
+
+.setting_window .reset>div:last-child {
+    flex: 2;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+
+/*clipboard_desc Style
+**********************************/
+
+.setting_window .clipboard_desc {
+    border-top-width: 0;
+    line-height: 10vh;
+    padding-left: 20px;
+    font-size: .9rem;
+    color: rgb(136, 136, 136);
+}
+
+
+/* About Me */
+
+.aboutMe {
+    margin-top: 5vh;
+    background: white;
+    box-sizing: border-box;
+    border: 2px solid rgb(229, 229, 229);
+    border-width: 2px 0;
+}
+
+.aboutMe h1 {
+    text-align: center;
+    font-size: 2.5rem;
+    padding: 20px 20px 10px 20px;
+}
+
+.aboutMe .version {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.aboutMe .version span:first-child {
+    font-weight: bold;
+    font-size: 0.9rem
+}
+
+.aboutMe .version span:last-child {
+    font-size: 0.9rem
+}
+
+.aboutMe p {
+    line-height: 2rem;
+    border-radius: 5px;
+    width: 95%;
+    margin: auto;
+    padding: 20px;
+    box-sizing: border-box;
+    box-shadow: 0 0 5px rgba(0, 0, 0, 0.3)
+}
+
+.aboutMe p span:first-of-type {
+    background: hsl(0, 100%, 95%);
+    color: hsl(0, 100%, 15%);
+    border-radius: 5px;
+    padding: 3px;
+}
+
+.aboutMe p span:last-of-type {
+    background: hsl(120, 100%, 95%);
+    color: hsl(120, 100%, 15%);
+    border-radius: 5px;
+    padding: 3px;
+}
+
+.aboutMe .desc {
+    width: 95%;
+    box-sizing: border-box;
+    margin: auto;
+    padding: 20px 0;
+}
+
+.aboutMe a.social {
+    background: rgb(56, 126, 245);
+    display: block;
+    text-decoration: none;
+    color: white;
+    width: 95%;
+    margin: auto;
+    text-align: center;
+    border-radius: 5px;
+    padding: 20px;
+    box-sizing: border-box;
+    margin-bottom: 15px;
+}
+
+.aboutMe a.social:last-of-type {
+    margin-bottom: 14vh;
+}
+
+.aboutMe a.social:active {
+    background: rgb(12, 96, 238);
+}
+
+
+/*fixed bottom nav style*/
+
+.aboutMe .bnav {
+    background: rgb(56, 126, 245);
+    display: flex;
+    position: fixed;
+    bottom: 0;
+    width: 100%;
+    height: 12vh;
+}
+
+.aboutMe .bnav a {
+    text-decoration: none;
+    color: rgb(195, 216, 252);
+    flex: 1;
+    text-align: center;
+    line-height: 12vh;
+}
+
+.aboutMe .bnav a:active {
+    color: white;
+}
+
+
+/* translate class that we will toggle with jQuery */
+
+.translate {
+    left: 0;
+}
+
+.transition {
+    transition: left 0.5s ease;
+}
+
+
+/*Language window style
+**********************************/
+
+.language_setting {
+    position: relative;
+    max-width: 100vw;
+    height: 100vh;
+    background: rgb(245, 245, 245);
+    margin-top: 0;
+    transition: margin 0.5s ease;
+}
+
+.language_setting .Lrow {
+    display: flex;
+    background: rgb(56, 126, 245);
+    height: 12vh;
+    width: 100%;
+    color: white;
+}
+
+.language_setting .Lrow div:first-child {
+    line-height: 12vh;
+    font-weight: bold;
+    font-size: 1.3rem;
+    margin-left: 20px;
+}
+
+.language_setting .Lrow div:last-child {
+    line-height: 12vh;
+    margin-left: auto;
+    font-size: 1.1rem;
+    margin-right: 15px;
+    cursor: pointer;
+}
+
+.language_setting .Lrow div:last-child:active {
+    color: rgb(100, 154, 247);
+}
+
+.language_setting .espagnol,
+.language_setting .english {
+    background: white;
+    border-bottom: 2px solid rgb(229, 229, 229);
+    height: 12vh;
+    line-height: 12vh;
+    cursor: pointer;
+    box-sizing: border-box;
+    padding: 0 20px;
+    position: relative;
+}
+
+.language_setting .espagnol div,
+.language_setting .english div {
+    display: none;
+}
+
+.language_setting .selected {
+    background: rgb(247, 247, 247);
+}
+
+.language_setting .checked img {
+    width: 40px;
+}
+
+.language_setting .checked {
+    position: absolute;
+    top: 0;
+    line-height: 14vh;
+    display: block !important;
+}
+
+.language_setting .espagnol .checked,
+.language_setting .english .checked {
+    right: 10px;
+}
+
+.slideup {
+    margin-top: -100vh;
+}
+
+
+/*Dark Mode Colors Change
+************************************/
+
+
+/*row 1 to 4
+************************************/
+
+
+/*row 1 to 4
+************************************/
+
+.sr {
+    color: rgb(255, 255, 255);
+}
+
+.sr div.colorChange:first-child {
+    background-color: rgb(68, 68, 68) !important;
+}
+
+.sr div.colorChange:first-child:active {
+    background-color: rgb(38, 38, 38) !important;
+}
+
+.sr div.colorChange:last-child {
+    background-color: rgb(38, 38, 38) !important;
+    border-top: 1px solid rgb(50, 50, 50) !important;
+    color: white !important;
+}
+
+
+/*row 5
+************************************/
+
+.row5 div.colorChange {
+    background-color: rgb(68, 68, 68) !important;
+    color: white !important;
+}
+
+.row5 div.colorChange:active {
+    background-color: rgb(38, 38, 38) !important;
+}
+
+
+/*row 6 to 8
+************************************/
+
+.ss div.colorChange {
+    background-color: rgb(68, 68, 68) !important;
+    color: white !important;
+}
+
+.ss div.colorChange:active {
+    background-color: rgb(38, 38, 38) !important;
+}
+
+.ss .b.colorChange {
+    background-color: rgb(56, 126, 245) !important;
+    color: white !important;
+}
+
+.ss .b.colorChange:active {
+    background-color: rgb(12, 96, 238) !important;
+}
+
+.ss .r.colorChange {
+    background-color: rgb(239, 71, 58) !important;
+    color: white !important;
+}
+
+.ss .r.colorChange:active {
+    background-color: rgb(228, 33, 18) !important;
+}
+
+
+/*row 9
+************************************/
+
+.row9.colorChange {
+    color: white !important;
+}
+
+.row9 div.colorChange {
+    background-color: rgb(68, 68, 68) !important;
+}
+
+.row9 div.colorChange:active {
+    background-color: rgb(38, 38, 38) !important;
+}
+
+.row9 div.colorChange:nth-child(3),
+.row9 div.colorChange:nth-child(4) {
+    background-color: rgb(239, 71, 58) !important;
+}
+
+.row9 div.colorChange:nth-child(3):active,
+.row9 div.colorChange:nth-child(4):active {
+    background-color: rgb(228, 33, 18) !important;
+}
+
+
+/*Setting Window Style
+****************************************/
+
+.setting_window.colorChange {
+    background: rgb(63, 64, 65) !important;
+    color: white;
+}
+
+
+/*Language Style*/
+
+.setting_window .language.colorChange {
+    background: rgb(63, 64, 65) !important;
+}
+
+.setting_window .language.colorChange:active {
+    background: rgb(63, 64, 65) !important;
+}
+
+.setting_window .language div.colorChange:nth-child(3) {
+    color: rgb(197, 197, 197) !important;
+}
+
+
+/*Dark mode Style*/
+
+.setting_window .dm.colorChange,
+.setting_window .enable.colorChange,
+.setting_window .reset.colorChange,
+.setting_window .clipboard_desc.colorChange {
+    background: rgb(63, 64, 65) !important;
+    border-color: rgb(100, 100, 100);
+    border-width: 1px 0;
+}
+
+.setting_window .clipboard_desc.colorChange {
+    border-width: 0 0 2px 0;
+}
+
+
+/*Slider Style*/
+
+.setting_window .slider.colorChange {
+    background: rgb(63, 64, 65) !important;
+    border-color: rgb(100, 100, 100);
+    border-width: 0 0 1px 0;
+}
+
+.setting_window .slider input.colorChange {
+    background: rgb(204, 204, 204) !important;
+}
+
+
+/* About Me */
+
+.aboutMe.colorChange {
+    background: rgb(63, 64, 65) !important;
+    color: white !important;
+    border-color: rgba(50, 50, 50, 0.5);
+    border-width: 2px 0 0 0;
+}
+
+.aboutMe p.colorChange {
+    color: black !important;
+    background: white !important;
+}
+
+.aboutMe p span.colorChange:first-of-type {
+    background: hsl(0, 100%, 95%) !important;
+    color: hsl(0, 100%, 15%) !important;
+}
+
+.aboutMe p span.colorChange:last-of-type {
+    background: hsl(120, 100%, 95%) !important;
+    color: hsl(120, 100%, 15%) !important;
+}
+
+
+/*Language window style
+**********************************/
+
+.language_setting.colorChange {
+    background: rgb(63, 64, 65) !important;
+}
+
+.language_setting .Lrow div.colorChange:last-child:active {
+    color: rgb(100, 154, 247) !important;
+}
+
+.language_setting .espagnol.colorChange,
+.language_setting .english.colorChange {
+    background: rgb(63, 64, 65) !important;
+    color: white !important;
+    border-bottom: 4px groove rgba(120, 120, 120, 0.5) !important;
+}
+
+.language_setting .selected.colorChange {
+    background: rgb(63, 64, 65) !important;
+}
+
+
+/*classes that we will add with jQuery
+****************************************/
+
+
+/*blue to green*/
+
+div.container div.sr .gr {
+    background-color: rgb(51, 206, 95) !important;
+}
+
+div.container div.sr .gr:active {
+    background-color: rgb(40, 165, 76) !important;
+}
+
+div.container div.sr .gr-op {
+    background-color: rgb(245, 245, 245) !important;
+    border: 0 !important;
+}
+
+div.container div.sr .gr-op-cc {
+    background-color: rgb(63, 64, 65) !important;
+    border: 0 !important;
+}
+
+
+/*white to grey*/
+
+div.container div.disabled {
+    background-color: rgb(144, 164, 174) !important;
+    color: rgb(183, 188, 191) !important;
+    cursor: not-allowed !important;
+}
+
+div.container div.disabled:active {
+    background-color: rgb(144, 164, 174) !important;
+}
+
+
+/*M D P M GR style
+********************************/
+
+div.container div.ss .gr {
+    background-color: rgb(51, 206, 95) !important;
+}
+
+div.container div.ss .gr:active {
+    background-color: rgb(40, 165, 76) !important;
+}
+
+      </style>
+   </head>
+   <body>
+      <div class="container">
+         <div class="sr row1">
+            <div id="hex" class="gr active">HEX</div>
+            <div class="gr-op op_target">
+               <span id="ho">0</span>
+            </div>
+         </div>
+         <div class="sr row2">
+            <div id="dec">DEC</div>
+            <div class="op_target">
+               <span id="do">0</span>
+            </div>
+         </div>
+         <div class="sr row3">
+            <div id="oct">OCT</div>
+            <div class="op_target">
+               <span id="oo">0</span>
+            </div>
+         </div>
+         <div class="sr row4">
+            <div id="bin">BIN</div>
+            <div class="op_target">
+               <span id="bo">0</span>
+            </div>
+         </div>
+         <div class="row5">
+            <div id="a" class="txt">A</div>
+            <div id="b" class="txt">B</div>
+            <div id="c" class="txt">C</div>
+            <div id="d" class="txt">D</div>
+            <div id="e" class="txt">E</div>
+            <div id="f" class="txt">F</div>
+         </div>
+         <div class="ss row6">
+            <div id="seven" class="bd txt">7</div>
+            <div id="eight" class="od txt">8</div>
+            <div id="nine" class="od txt">9</div>
+            <div id="del" class="r">DEL</div>
+            <div id="ac" class="r">AC</div>
+         </div>
+         <div class="ss row7">
+            <div id="four" class="bd txt">4</div>
+            <div id="five" class="bd txt">5</div>
+            <div id="six" class="bd txt">6</div>
+            <div id="multiply" class="b rd">X</div>
+            <div id="divided" class="b rd sz">÷</div>
+         </div>
+         <div class="ss row8">
+            <div id="one" class="txt">1</div>
+            <div id="two" class="bd txt">2</div>
+            <div id="three" class="bd txt">3</div>
+            <div id="plus" class="b rd sz">+</div>
+            <div id="mince" class="b rd sz">-</div>
+         </div>
+         <div class="row9">
+            <div class="txt" id="point">.</div>
+            <div class="txt" id="zero">0</div>
+            <div id="equal" class="rd sz">=</div>
+            <div id="setting"><img alt="setting icon" src="https://i.imgur.com/W3m9sfw.png"></div>
+         </div>
+         <div class="clipboard_flex clipboard_display">
+            <div class="clipboard_style">
+               Copied to Clipboard
+            </div>
+         </div>
+      </div>
+      <!-- container -->
+      <div class="setting_window">
+         <div class="Srow">
+            <div>
+               <img id="back" alt="back icon" src="https://i.imgur.com/u7SidwT.png">
+            </div>
+            <div class="stg">
+               Settings
+            </div>
+         </div>
+         <div class="language">
+            <div>
+               <img id="earth" alt="earth icon" src="https://i.imgur.com/M9DA1H7.png">
+            </div>
+            <div class="lg">
+               Language
+            </div>
+            <div class="clg">
+               English>
+            </div>
+         </div>
+         <div class="dm">
+            <div>
+               <img id="pbrush" alt="paint brush icon" src="https://i.imgur.com/IFW8Laf.png">
+            </div>
+            <div class="darkm">
+               Dark mode
+            </div>
+            <div>
+               <div class="switch">
+                  <div id="dark_mode" class="circle"></div>
+               </div>
+            </div>
+         </div>
+         <div class="vibration">
+            <div class="vbr">
+               Vibration
+            </div>
+            <div class="vibration_amount"></div>
+         </div>
+         <div class="enable">
+            <div class="en">
+               Enable
+            </div>
+            <div>
+               <div class="switch bc">
+                  <div id="vibration" class="circle mla"></div>
+               </div>
+            </div>
+         </div>
+         <div class="slider">
+            <div>
+               -
+            </div>
+            <div>
+               <input class="in_en" id="vbr_nbr" type="range" max="100" min="5" value="80">
+            </div>
+            <div>
+               +
+            </div>
+         </div>
+         <div class="reset">
+            <div class="reset_desc">Reset values when changing the numeric base</div>
+            <div>
+               <div class="switch bc">
+                  <div id="reset" class="circle mla"></div>
+               </div>
+            </div>
+         </div>
+         <div class="clipboard_desc">
+            Long press the results to share.
+         </div>
+ 
+         </div>
+      </div>
+      <!-- Setting Window -->
+      <div class="language_setting">
+         <div class="Lrow">
+            <div class="sl">
+               Select language
+            </div>
+            <div class="ok">
+               Ok
+            </div>
+         </div>
+         <!-- Lrow -->
+         <div class="espagnol">
+            Español
+            <div>
+               <img alt="checkmark mark" class="checkmark" src="https://i.imgur.com/k4mAmp2.png">
+            </div>
+         </div>
+         <div class="english selected">
+            English
+            <div class="checked">
+               <img alt="checkmark mark" class="checkmark" src="https://i.imgur.com/k4mAmp2.png">
+            </div>
+         </div>
+      </div>
+   </body>
+</html>
